@@ -3,7 +3,7 @@ export class Publication {
     private _image: string,
     private _title: string,
     private _text: string,
-    private _dateToPublish: string,
+    private _dateToPublish: Date,
     private _published: boolean,
     private _socialMedia: string,
     private readonly _userId: number,
@@ -17,10 +17,10 @@ export class Publication {
   set socialMedia(value: string) {
     this._socialMedia = value;
   }
-  get dateToPublish(): string {
+  get dateToPublish(): Date {
     return this._dateToPublish;
   }
-  set dateToPublish(value: string) {
+  set dateToPublish(value: Date) {
     this._dateToPublish = value;
   }
   get published(): boolean {
