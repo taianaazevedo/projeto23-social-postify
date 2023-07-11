@@ -1,59 +1,71 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { User } from "@prisma/client";
-import { PrismaService } from "src/prisma/prisma.service";
-import { AuthRegisterDTO } from "./dto/auth-register.dto";
-import { UserService } from "./../user/user.service";
-import * as bcrypt from "bcrypt";
-
-@Injectable()
-export class AuthService {
-
-  private EXPIRATION_TIME = "7 days";
-  private ISSUER = "Driven";
-  private AUDIENCE = "users";
-
-  constructor(
-    private jwtService: JwtService,
-    private prisma: PrismaService,
-    private userService: UserService
-  ) { }
-
-  async createToken(user: User) {
-    const token = this.jwtService.sign({
-      name: user.name,
-      email: user.email
-    }, {
-      expiresIn: this.EXPIRATION_TIME,
-      subject: String(user.id),
-      issuer: this.ISSUER,
-      audience: this.AUDIENCE
-    });
-
-    return {
-      accessToken: token
+import {
+    BadRequestException,
+    Injectable,
+    UnauthorizedException,
+  } from '@nestjs/common';
+  import { AuthSignInDTO } from './dto/auth-login.dto';
+  import { AuthRegisterDTO } from './dto/auth-register.dto';
+  import { UserService } from 'src/user/user.service';
+  import { JwtService } from '@nestjs/jwt';
+  import * as bcrypt from 'bcrypt';
+  import { UserRepository } from 'src/user/repository/user.repository';
+  import { User } from '@prisma/client';
+  
+  @Injectable()
+  export class AuthService {
+    private AUDIENCE = 'users';
+    private ISSUER = 'Driven';
+  
+    constructor(
+      private readonly usersService: UserService,
+      private readonly usersRepository: UserRepository,
+      private readonly jwtService: JwtService,
+    ) {}
+  
+    async signup(body: AuthRegisterDTO) {
+      const user = await this.usersService.addUser(body);
+      return this.createToken(user);
     }
-  }
-
-  async login(email: string, password: string) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        email
+  
+    async signin({ email, password }: AuthSignInDTO) {
+      const user = await this.usersRepository.findUserByEmail(email);
+      if (!user) throw new UnauthorizedException('Email or password invalid');
+  
+      const validPassword = bcrypt.compareSync(password, user.password);
+      if (!validPassword)
+        throw new UnauthorizedException('Email or password invalid');
+  
+      return this.createToken(user);
+    }
+  
+    createToken(user: User) {
+      const token = this.jwtService.sign(
+        {
+          name: user.name,
+          email: user.email,
+        },
+        {
+          expiresIn: '7 days',
+          subject: String(user.id),
+          issuer: this.ISSUER,
+          audience: this.AUDIENCE,
+        },
+      );
+  
+      return { token };
+    }
+  
+    checkToken(token: string) {
+      try {
+        const data = this.jwtService.verify(token, {
+          issuer: this.ISSUER,
+          audience: this.AUDIENCE,
+        });
+  
+        return data;
+      } catch (error) {
+        console.log(error);
+        throw new BadRequestException(error);
       }
-    });
-
-    if (!user) {
-      throw new UnauthorizedException(`Email or password not valid.`);
     }
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) throw new UnauthorizedException(`Email or password not valid.`);
-
-    return this.createToken(user);
   }
-
-  async register(data: AuthRegisterDTO) {
-    const user = await this.userService.addUser(data);
-    return this.createToken(user);
-  }
-}
