@@ -1,12 +1,17 @@
-import { isEmail } from "class-validator";
-
 export class User {
   constructor(
+    private _id: number,
     private _name: string,
     private _email: string,
     private _password: string,
     private _avatar: string,
   ) {}
+  get id(): number {
+    return this._id;
+  }
+  set id(value: number) {
+    this._id = value;
+  }
 
   get name(): string {
     return this._name;
@@ -20,7 +25,6 @@ export class User {
   }
   set email(value: string) {
     this._email = value;
-    
   }
 
   get password(): string {

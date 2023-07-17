@@ -23,7 +23,7 @@ model User {
 model Publication {
   id            Int      @id @default(autoincrement())
   image         String   @db.VarChar(255)
-  title         String   @db.VarChar(255)
+  title         String   @db.VarChar(255) @unique
   text          String   @db.VarChar(255)
   dateToPublish DateTime
   published     Boolean  @default(false)
